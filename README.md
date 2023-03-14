@@ -13,7 +13,8 @@ Step 3: Connect your Intel RealSense Camera and place the Checkerboard in the fi
 Step 4: Run the "capture_images_realsense.py" file :- 
 ```
 "python3 capture_images_realsense.py"
-```<br>
+```
+<br>
 Step 5: Press "Y" to indicate that the images folder needs to be cleared so you can add your own images. <br> 
 Step 6: Move the checkerboard around at various orientations and translations. Press spacebar every time you want to capture a picture at that pose. The more you click, the better! <br>
 Step 7: Now you must have images inside your /images folder. <br>
