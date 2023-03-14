@@ -12,8 +12,8 @@ Step 3: Install pyrealsense2:-
 
 ```
 pip install pyrealsense2
-
 ```
+
 RUNNING THE CODE: <br>
 
 Step 1: Print out the Checkerboard_19_by_13.pdf provided in the repo<br>
