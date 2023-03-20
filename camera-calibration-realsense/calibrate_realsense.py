@@ -9,7 +9,9 @@ import argparse
 
 def main(chessboard_horizontal : int,
          chessboard_vertical : int,
-         chessboard_size : int) -> None:
+         chessboard_size : int,
+         resolutionHorizontal:int,
+         resolutionVertical:int) -> None:
 
     chessboardSize = (chessboard_horizontal,chessboard_vertical)  # e.g. (19,13)
 
@@ -19,8 +21,8 @@ def main(chessboard_horizontal : int,
     # frameSize = (int(frame_width),int(frame_height))
     # print(f"[INFO] Camera frame width: {frame_width}")
     # print(f"[INFO] Camera frame height: {frame_height}")
-    frame_width = 1280
-    frame_height = 720
+    frame_width = resolutionHorizontal
+    frame_height = resolutionVertical
     frameSize = (frame_height,frame_width)
 
 
@@ -105,6 +107,16 @@ if __name__ == '__main__':
                         nargs='?',
                         required=True,
                         help='the size in mm of on chessboard square')
+    parser.add_argument('--resolutionHorizontal','-RH',
+                        type=int,
+                        nargs='?',
+                        required=True,
+                        help='Horizontal resolution of camera')
+    parser.add_argument('--resolutionVertical','-RV',
+                        type=int,
+                        nargs='?',
+                        required=True,
+                        help='Vertical resolution of camera')
 
     args = parser.parse_args()
     if args.chessBoardHorizontal is not None:
@@ -113,7 +125,13 @@ if __name__ == '__main__':
         _chessboard_vertical = args.chessBoardVertical
     if args.chessBoardSize is not None:
         _chessboard_size = args.chessBoardSize
+    if args.resolutionHorizontal is not None:
+        _resolutionHorizontal= args.resolutionHorizontal
+    if args.resolutionVertical is not None:
+        _resolutionVertical = args.resolutionVertical
         
     main(chessboard_horizontal=_chessboard_horizontal,
          chessboard_vertical=_chessboard_vertical,
-         chessboard_size=_chessboard_size)
+         chessboard_size=_chessboard_size,
+         resolutionHorizontal = _resolutionHorizontal,
+         resolutionVertical = _resolutionVertical)
