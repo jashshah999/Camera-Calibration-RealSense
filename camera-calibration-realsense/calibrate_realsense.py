@@ -1,44 +1,119 @@
-import cv2 as cv
+#!/usr/bin/env python
+
+
 import numpy as np
-import time
-import os
-import pyrealsense2
-from realsense_depth import *
+import cv2 as cv
+import glob
+import json
 import argparse
 
+def main(chessboard_horizontal : int,
+         chessboard_vertical : int,
+         chessboard_size : int) -> None:
+
+    chessboardSize = (chessboard_horizontal,chessboard_vertical)  # e.g. (19,13)
+
+    # camera frame size
+    # with open("frame_resolution.txt", "r") as f:
+    #     frame_width, frame_height = f.read().split()
+    # frameSize = (int(frame_width),int(frame_height))
+    # print(f"[INFO] Camera frame width: {frame_width}")
+    # print(f"[INFO] Camera frame height: {frame_height}")
+    frame_width = 1280
+    frame_height = 720
+    frameSize = (frame_height,frame_width)
 
 
-if not os.path.exists("images"):
-	os.makedirs("images")
-else:
-	print("[INFO] erasing images in the folder?")
-	if ((input("[Y/N] ").capitalize()) == "Y"):
-		for file in os.listdir("images"):
-			os.remove("images/" + file)
-	else:
-		print("[INFO] exiting...")
 
-cv.namedWindow("camera capture preview")
+    criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
-i = 0
-dc = DepthCamera()
-while True:
+    objp = np.zeros((chessboardSize[0] * chessboardSize[1], 3), np.float32)
+    objp[:,:2] = np.mgrid[0:chessboardSize[0],0:chessboardSize[1]].T.reshape(-1,2)
 
-	ret, _,frame = dc.get_frame()
+    size_of_chessboard_squares_mm = chessboard_size  # e.g. 20mm
+    objp = objp * size_of_chessboard_squares_mm
 
-	sho_frame = frame.copy()
-	cv.putText(sho_frame, "Press 'space' to capture", (10, 30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
-	cv.putText(sho_frame, "Press 'q' to exit", (10, 60), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
-	cv.imshow("preview", sho_frame)
-	
-	key = cv.waitKey(1)
-	if key == 32:  # space
-		cv.imwrite("images/img" + str(i) + ".png", frame)
-		i += 1
-		print(f"[INFO] Image {i} saved")
-	elif key == ord("q"):
-		print("[INFO] exiting...")
-		break
+    objpoints = [] # 3d point in real world space
+    imgpoints = [] # 2d points in image plane.
 
-# cap.release()
-cv.destroyAllWindows()
+
+    images = glob.glob('./images/*.png')
+
+    for image in images:
+
+        img = cv.imread(image)
+        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+
+        ret, corners = cv.findChessboardCorners(gray, chessboardSize, None)
+
+        if ret == True:
+
+            objpoints.append(objp)
+            corners2 = cv.cornerSubPix(gray, corners, (11,11), (-1,-1), criteria)
+            imgpoints.append(corners)
+
+            cv.drawChessboardCorners(img, chessboardSize, corners2, ret)
+            cv.imshow('img', img)
+            cv.waitKey(300)
+
+    cv.destroyAllWindows()
+
+
+    ret, cameraMatrix, dist, rvecs, tvecs = cv.calibrateCamera(objpoints, imgpoints, frameSize, None, None)
+
+    # show cameras with translation vectors and rotation in a plot
+
+
+    print("[INFO] ret: \n", ret)  # ?
+    print("[INFO] cameraMatrix: \n", cameraMatrix)  # A = [fx 0 cx; 0 fy cy; 0 0 1] (linear distortion)
+    print("[INFO] dist: \n", dist)  # distortion coefficients (additional non-linear distortion)
+    print("[INFO] tvecs: \n", tvecs)  # translations for each camera pose
+    print("[INFO] tvecs: \n", rvecs)  # rotations for each camera pose
+
+    print("[INFO] Printing results json file ..")
+    print("[INFO] Saving camera 3x3 matrix and vector of distortion coefficients")
+    
+    # write json
+    with open("camera_calibration.json", "w") as f:
+        data = {"cameraRes" : [int(frame_width), int(frame_height)],
+                "cameraMatrix": cameraMatrix.tolist(),
+                "distortion": dist.tolist()}
+        json.dump(data, f, indent=2)
+    
+    # write opencv-yaml
+    s = cv.FileStorage("camera_calibration.yml", cv.FileStorage_WRITE)
+    s.write('image_width', int(frame_width))
+    s.write('image_height', int(frame_height))
+    s.write('camera_matrix', cameraMatrix)
+    s.write('distortion_coefficients', dist)
+    s.release()
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Compute calibration for camera')
+    parser.add_argument('--chessBoardHorizontal', '-H',
+                        type=int,
+                        nargs='?',
+                        required=True,
+                        help='an integer corresponding to the internal corners of the chessboard horizontal side')
+    parser.add_argument('--chessBoardVertical', '-V',
+                        type=int,
+                        nargs='?',
+                        required=True,
+                        help='an integer corresponding to the internal corners of the chessboard vertical side')
+    parser.add_argument('--chessBoardSize', '-S',
+                        type=int,
+                        nargs='?',
+                        required=True,
+                        help='the size in mm of on chessboard square')
+
+    args = parser.parse_args()
+    if args.chessBoardHorizontal is not None:
+        _chessboard_horizontal = args.chessBoardHorizontal
+    if args.chessBoardVertical is not None:
+        _chessboard_vertical = args.chessBoardVertical
+    if args.chessBoardSize is not None:
+        _chessboard_size = args.chessBoardSize
+        
+    main(chessboard_horizontal=_chessboard_horizontal,
+         chessboard_vertical=_chessboard_vertical,
+         chessboard_size=_chessboard_size)
